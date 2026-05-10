@@ -3,7 +3,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 
-QString markTargetWord( const QString & sentence, const QString & word )
+static QString markTargetWord( const QString & sentence, const QString & word )
 {
   // TODO properly handle inflected words.
   QString result = sentence;
@@ -101,7 +101,7 @@ void AnkiConnector::postToAnki( const QString & postData )
   request.setTransferTimeout( transfer_timeout );
   //  request.setAttribute( QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy );
   request.setHeader( QNetworkRequest::ContentTypeHeader, "application/json" );
-  auto reply = mgr->post( request, postData.toUtf8() );
+  auto * reply = mgr->post( request, postData.toUtf8() );
   connect( reply, &QNetworkReply::errorOccurred, this, [ this ]( QNetworkReply::NetworkError e ) {
     qWarning() << e;
     emit this->errorText( tr( "Anki: post to Anki failed" ) );
