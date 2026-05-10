@@ -450,6 +450,8 @@ void ArticleView::sendToAnki( const QString & word,
     url  = lastAudioUrl;
   }
 
+  // TODO: flag to disable sending sound
+  if ( false ) {
   // If no data yet, but we have a local sound link, try to fetch it first
   if ( data.isEmpty() && !audioLink_.isEmpty() && !Utils::Url::isWebAudioUrl( QUrl( audioLink_ ) ) ) {
     QUrl audioUrl( audioLink_ );
@@ -504,6 +506,7 @@ void ArticleView::sendToAnki( const QString & word,
     QJsonArray fields;
     fields.append( cfg.preferences.ankiConnectServer.text );
     audioObj.insert( "fields", fields );
+  }
   }
 
   ankiConnector->sendToAnki( word, dict_definition, sentence, audioObj );
@@ -757,7 +760,7 @@ void ArticleView::injectDarkModeJavaScript()
       // Prevent duplicate injection
       if (window.gdDarkModeInjected) return;
       window.gdDarkModeInjected = true;
-      
+
       // Function to inject Dark Reader
       function injectDarkReader() {
         // Check if Dark Reader is already loaded
@@ -806,7 +809,7 @@ void ArticleView::injectDarkModeJavaScript()
           });
         }
       }
-      
+
       // Inject after page load
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', injectDarkReader);
@@ -1141,8 +1144,24 @@ void ArticleView::linkClickedInHtml( const QUrl & url_ )
 
 void ArticleView::makeAnkiCardFromArticle( const QString & article_id )
 {
-  const auto js_code = QString( R"EOF(document.getElementById("gd-%1").innerText)EOF" ).arg( article_id );
+  const auto js_code = QString( R"EOF(
+    let gd = document.getElementById("gd-%1").cloneNode(true);
+    for (let ftag of ["img", "a", "link"]) {
+      let elements = gd.getElementsByTagName(ftag);
+      while (elements[0]) {
+        elements[0].parentNode.removeChild(elements[0]);
+      }
+    }
+    for (let cname of ["priority-symbol", "entry-footnotes"]) {
+      let elements = gd.getElementsByClassName(cname);
+      while (elements[0]) {
+        elements[0].parentNode.removeChild(elements[0]);
+      }
+    }
+    gd.innerHTML
+  )EOF" ).arg( article_id );
   webview->page()->runJavaScript( js_code, [ this ]( const QVariant & article_text ) {
+    qDebug() << "make anki card, article text: " << article_text;
     sendToAnki( getWord(), article_text.toString(), translateLine->text() );
   } );
 }
